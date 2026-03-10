@@ -15,6 +15,7 @@ namespace DotnetLearning.Controllers
         private readonly BookingValidator _validator;
         private readonly IEmailService _emailService;
         public record BookingDto(int SkillId, DateTime ScheduledAt, int DurationInMinutes);
+        public record MyBookingsDto(int bookingId, string skillTitle, string teacherName, DateTime scheduledAt, int durationMinutes, decimal totalPrice, string status);
         public BookingController(AppDbContext context, BookingValidator validator, IEmailService emailService)
         {
             _context = context;
@@ -27,7 +28,7 @@ namespace DotnetLearning.Controllers
         public async Task<IActionResult> CreateBooking([FromBody] BookingDto bookingDto)
         {
             var studentId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var skill =await _context.Skills.FindAsync(bookingDto.SkillId);
+            var skill = await _context.Skills.FindAsync(bookingDto.SkillId);
             if (skill == null)
             {
                 return NotFound();
@@ -80,6 +81,28 @@ namespace DotnetLearning.Controllers
             );
 
             return Ok(booking);
+        }
+        [HttpGet]
+        [Route("api/bookings/my")]
+        [Authorize]
+        public async Task<IActionResult> GetMyBookings()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var bookings = await _context.Bookings
+                .Where(b => b.StudentId == userId)
+                .Include(b => b.Skill)
+                .Include(b => b.Teacher)
+                .ToListAsync();
+            var result = bookings.Select(b => new MyBookingsDto(
+                b.BookingId,
+                b.Skill.Title,
+                b.Teacher.FirstName,
+                b.ScheduledAt,
+                b.DurationMinutes,
+                b.TotalPrice,
+                b.Status.ToString()
+            )).ToList();
+            return Ok(result);
         }
     }
 }

@@ -7,19 +7,23 @@ using System.Security.Claims;
 namespace DotnetLearning.Controllers
 {
     [ApiController]
+    [Authorize(Roles = "Teacher")]
     public class TeachersController : ControllerBase
     {
         private readonly AppDbContext _context;
         public record TeacherDto(string Bio, decimal HourlyRate);
         public record TimeDto(TimeSpan StartTime, TimeSpan EndTime, bool IsBooked);
         public record DayAvailabilityDto(DateTime Date, List<TimeDto> Slots);
+        public record GetTeacherStats(List<Skill> TeacherSkills,List<BookingDto> UpcomingBookings, List<BookingDto> CompletedBookings,
+            decimal TotalEarnings, double AverageRating);
+        public record BookingDto(int BookingId, string SkillTitle, string LearnerName,
+      DateTime ScheduledAt, int DurationMinutes, decimal TotalPrice, string Status);
         public TeachersController(AppDbContext context)
         {
             _context = context;
         }
         [HttpPost]
         [Route("api/teachers/profile")]
-        [Authorize(Roles = "Teacher")]
         public async Task<IActionResult> createTeacherProfile([FromBody] TeacherDto teacherDetails)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -104,7 +108,6 @@ namespace DotnetLearning.Controllers
         public record AvailabilityDto(DayOfWeek DayOfWeek, TimeSpan StartTime, TimeSpan EndTime);
         [HttpPost]
         [Route("api/teachers/availability")]
-        [Authorize(Roles ="Teacher")]
         public async Task<IActionResult> setTeacherAvailability([FromBody] List<AvailabilityDto> availabilityDtos)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -125,5 +128,28 @@ namespace DotnetLearning.Controllers
             await _context.SaveChangesAsync();
             return Ok();
         }
+        [HttpGet]
+        [Route("/api/teachers/stats")]
+        public async Task<IActionResult> getTeacherStats()
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var teacherSkills = await _context.Skills.Where(a => a.TeacherId == currentUserId).ToListAsync();
+            var bookings = await _context.Bookings.Where(a => a.TeacherId == currentUserId).Include(b => b.Skill)
+      .Include(b => b.Student).ToListAsync();
+            var upcomingBookings = bookings.Where(a => a.ScheduledAt > DateTime.UtcNow).Select(b => new BookingDto(b.BookingId, b.Skill.Title, b.Student.UserName,
+                                  b.ScheduledAt, b.DurationMinutes, b.TotalPrice, b.Status.ToString())).ToList();
+            var completedBookings = bookings.Where(a => a.ScheduledAt < DateTime.UtcNow && a.Status!=BookingStatus.Cancelled).Select(b => new BookingDto(b.BookingId, b.Skill.Title, b.Student.UserName,
+                                  b.ScheduledAt, b.DurationMinutes, b.TotalPrice, b.Status.ToString())).ToList();
+            var totalEarnings = bookings.Sum(a => a.TotalPrice);
+            var averageRating = teacherSkills.Count > 0 ? teacherSkills.Average(a => a.Rating) : 0.0;
+            return Ok(new GetTeacherStats(
+                TeacherSkills: teacherSkills,
+                UpcomingBookings: upcomingBookings,
+                CompletedBookings: completedBookings,
+                TotalEarnings: totalEarnings,
+                AverageRating: averageRating
+            ));
+        }
+
     }
 }
