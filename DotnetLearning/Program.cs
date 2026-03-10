@@ -22,7 +22,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             maxRetryDelay: TimeSpan.FromSeconds(5),
             errorNumbersToAdd: null)));
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<AppDbContext>();
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Events.OnRedirectToLogin = ctx =>
@@ -50,13 +51,12 @@ using (var scope = app.Services.CreateScope())
 
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     if (!await roleManager.RoleExistsAsync("Teacher"))
-    {
         await roleManager.CreateAsync(new IdentityRole("Teacher"));
-    }
     if (!await roleManager.RoleExistsAsync("User"))
-    {
         await roleManager.CreateAsync(new IdentityRole("User"));
-    }
+    // Student role used by Google OAuth new users and Onboarding role selection
+    if (!await roleManager.RoleExistsAsync("Student"))
+        await roleManager.CreateAsync(new IdentityRole("Student"));
 }
    
 // Configure the HTTP request pipeline.
