@@ -153,13 +153,20 @@ namespace DotnetLearning.Controllers
         [Authorize]
         [Route("/api/auth/me")]
         [HttpGet]
-        public IActionResult GetLoggedInDetails()
+        public async Task<IActionResult> GetLoggedInDetails()
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return Unauthorized();
+            var roles = await _userManager.GetRolesAsync(user);
+            var role = roles.FirstOrDefault();
             return Ok(new
             {
-                id = User.FindFirstValue(ClaimTypes.NameIdentifier),
-                email = User.FindFirstValue(ClaimTypes.Email),
-                role = User.FindFirstValue(ClaimTypes.Role)
+                id = user.Id,
+                email = user.Email,
+                name = $"{user.FirstName} {user.LastName}",
+                role,
+                isOnboardingComplete = user.IsOnboardingComplete
             });
         }
 
