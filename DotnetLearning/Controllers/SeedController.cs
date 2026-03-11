@@ -33,7 +33,8 @@ namespace DotnetLearning.Controllers
             var categories = await _db.SkillCategories.ToListAsync();
 
             // --- SKILLS ---
-            if (!await _db.Skills.AnyAsync())
+            var skillTitles = new[] { "React for Beginners", "ASP.NET Core API Development", "Python Data Science", "JavaScript & TypeScript", "Figma UI/UX Design", "Brand Identity Design", "SEO Fundamentals", "Social Media Marketing", "Excel for Business", "Financial Modelling", "Public Speaking Coaching", "Productivity Systems" };
+            if (!await _db.Skills.AnyAsync(s => skillTitles.Contains(s.Title)))
             {
                 var skills = new List<Skill>
                 {
@@ -65,9 +66,12 @@ namespace DotnetLearning.Controllers
             }
 
             var allSkills = await _db.Skills.ToListAsync();
-            var reactSkill = allSkills.First(s => s.Title == "React for Beginners");
-            var pythonSkill = allSkills.First(s => s.Title == "Python Data Science");
-            var figmaSkill = allSkills.First(s => s.Title == "Figma UI/UX Design");
+            var reactSkill = allSkills.FirstOrDefault(s => s.Title == "React for Beginners");
+            var pythonSkill = allSkills.FirstOrDefault(s => s.Title == "Python Data Science");
+            var figmaSkill = allSkills.FirstOrDefault(s => s.Title == "Figma UI/UX Design");
+
+            if (reactSkill == null || pythonSkill == null || figmaSkill == null)
+                return BadRequest("Skills not found after seeding — check categories exist in DB (run migrations first).");
 
             // --- BOOKINGS ---
             if (!await _db.Bookings.AnyAsync())
