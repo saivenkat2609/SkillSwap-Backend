@@ -60,13 +60,13 @@ using (var scope = app.Services.CreateScope())
 }
    
 // Configure the HTTP request pipeline.
-// Show detailed errors in all environments temporarily for debugging
+// CORS must be first so headers are present even on error responses
+app.UseCors("AllowFrontend");
+app.UseDeveloperExceptionPage();
 app.UseSwagger();
 app.UseSwaggerUI();
-app.UseDeveloperExceptionPage();
 
-//app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
+//app.UseHttpsRedirection()
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
