@@ -60,6 +60,7 @@ try
             await roleManager.CreateAsync(new IdentityRole("User"));
         if (!await roleManager.RoleExistsAsync("Student"))
             await roleManager.CreateAsync(new IdentityRole("Student"));
+
     }
 }
 catch (Exception ex)
